@@ -1,0 +1,232 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Code Walkthrough</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav"><div class="inner">
+  <a class="brand" href="index.html">ft_linear_regression</a>
+  <a href="index.html">Study plan</a>
+  <a href="concepts.html">Concepts</a>
+  <a href="code.html" aria-current="page">Code walkthrough</a>
+  <a href="playground.html">Playground</a>
+  <a href="defense.html">Defense prep</a>
+</div></nav>
+
+<main>
+<header class="page">
+  <div class="eyebrow">Code walkthrough</div>
+  <h1>Every file, and why it is written this way</h1>
+  <p class="lead">Keep the source files open next to this page. Each section quotes the important code and explains the choices behind it.</p>
+</header>
+
+<h2 id="map">Repository map</h2>
+<div class="table-wrap"><table>
+  <tr><th>File</th><th>Part</th><th>Role</th></tr>
+  <tr><td><code>predict.py</code></td><td>mandatory</td><td>Program 1. Prompts for a mileage, prints the estimated price.</td></tr>
+  <tr><td><code>train.py</code></td><td>mandatory</td><td>Program 2. Gradient descent on <code>data.csv</code>, saves θ0 and θ1.</td></tr>
+  <tr><td><code>model.py</code></td><td>mandatory</td><td>Shared code: the hypothesis, reading the CSV, saving and loading thetas.</td></tr>
+  <tr><td><code>plot.py</code></td><td>bonus</td><td>Plots the data and the regression line.</td></tr>
+  <tr><td><code>precision.py</code></td><td>bonus</td><td>Computes MAE, MSE, RMSE and R².</td></tr>
+  <tr><td><code>tests/test_model.py</code></td><td>extra</td><td>Automatic checks, including a comparison with the exact closed-form answer.</td></tr>
+  <tr><td><code>pyproject.toml</code>, <code>uv.lock</code></td><td>setup</td><td>Dependencies, managed by uv.</td></tr>
+  <tr><td><code>thetas.json</code></td><td>generated</td><td>Written by <code>train.py</code>. Not committed (it is in <code>.gitignore</code>), so the evaluator sees the program start untrained.</td></tr>
+</table></div>
+
+<div class="callout key"><strong>The library rule</strong>
+The subject forbids libraries that “do all the work” (e.g. <code>numpy.polyfit</code>). The mandatory files import only the Python standard library:
+<code>csv</code>, <code>json</code>, <code>math</code>, <code>os</code>, <code>pathlib</code>, <code>argparse</code>, <code>sys</code>. No numpy, no pandas, no scikit-learn.
+<code>matplotlib</code> is used only in <code>plot.py</code> to draw dots and a line; it computes nothing. You can prove it in the defense with:
+<pre style="margin:8px 0 0">grep -n "import" *.py</pre></div>
+
+<h2 id="data-flow">How the pieces connect</h2>
+<figure>
+<svg viewBox="0 0&#8239;720&#8239;210" role="img" aria-label="Data flow: data.csv to train.py to thetas.json to predict.py">
+  <defs><marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="var(--muted)"/></marker></defs>
+  <g font-family="ui-monospace, monospace" font-size="14" text-anchor="middle">
+    <rect x="10" y="40" width="120" height="50" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+    <text x="70" y="70" fill="var(--text)">data.csv</text>
+    <rect x="200" y="40" width="130" height="50" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="265" y="70" fill="var(--text)">train.py</text>
+    <rect x="400" y="40" width="130" height="50" rx="8" fill="var(--surface)" stroke="var(--border)"/>
+    <text x="465" y="70" fill="var(--text)">thetas.json</text>
+    <rect x="590" y="40" width="120" height="50" rx="8" fill="var(--accent-soft)" stroke="var(--accent)"/>
+    <text x="650" y="70" fill="var(--text)">predict.py</text>
+    <rect x="400" y="140" width="130" height="50" rx="8" fill="var(--blue-soft)" stroke="var(--blue)"/>
+    <text x="465" y="162" fill="var(--text)">plot.py</text>
+    <text x="465" y="180" fill="var(--text)">precision.py</text>
+  </g>
+  <g stroke="var(--muted)" stroke-width="1.5" fill="none" marker-end="url(#arr)">
+    <line x1="130" y1="65" x2="198" y2="65"/>
+    <line x1="330" y1="65" x2="398" y2="65"/>
+    <line x1="530" y1="65" x2="588" y2="65"/>
+    <line x1="465" y1="90" x2="465" y2="138"/>
+    <path d="M70,90 C70,165&#8239;300,165&#8239;398,165"/>
+  </g>
+  <g font-family="system-ui, sans-serif" font-size="12" fill="var(--muted)" text-anchor="middle">
+    <text x="364" y="58">writes</text><text x="559" y="58">reads</text>
+    <text x="265" y="25">model.py is imported by all four programs</text>
+  </g>
+</svg>
+<figcaption>train.py is the only program that learns. The other three only read the result.</figcaption>
+</figure>
+
+<!-- ================================================================ -->
+<h2 id="model"><code>model.py</code>: the shared foundation</h2>
+
+<h3><code>estimate_price</code>: the hypothesis</h3>
+<pre><span class="k">def</span> estimate_price(mileage: float, theta0: float, theta1: float) -&gt; float:
+    <span class="s">"""The hypothesis given by the subject, written exactly as specified."""</span>
+    <span class="k">return</span> theta0 + (theta1 * mileage)</pre>
+<p>This one line is the whole “model”. It is written exactly as in the subject so the evaluator can match it at a glance.
+Both <code>train.py</code> and <code>predict.py</code> call this same function. The subject asks for this: “the estimatePrice is the same as in our first program”.</p>
+
+<h3><code>parse_number</code>: safe conversion</h3>
+<p>Python's <code>float()</code> accepts <code>"nan"</code>, <code>"inf"</code> and <code>"1e400"</code> (which becomes <code>inf</code>). None of these is a valid mileage or price, so
+<code>parse_number</code> rejects anything that is not finite with <code>math.isfinite</code>, and turns <code>ValueError</code> into our own <code>ModelError</code> with a readable message.</p>
+
+<h3><code>ModelError</code>: one error type for the user</h3>
+<p>Every expected problem (missing file, bad row, corrupt thetas) raises <code>ModelError</code>. Each program's <code>main()</code> catches it, prints <code>Error: …</code> on stderr and returns exit code 1.
+So the user never sees a Python traceback for a predictable mistake, which evaluators often test.</p>
+
+<h3><code>load_dataset</code></h3>
+<ul>
+  <li>Uses the <code>csv</code> module rather than <code>line.split(",")</code>, so quoted fields and Windows line endings work.</li>
+  <li>Skips blank lines, requires a 2-column header, and checks that every row has 2 finite numbers. Errors give the line number: <code>Error: line 5: 'abc' is not a number</code>.</li>
+  <li>Column names are read from the header, not hard-coded. The subject says the algorithm should work “with any other dataset”: any CSV with a feature column and a target column works.</li>
+</ul>
+
+<h3><code>load_thetas</code> / <code>save_thetas</code></h3>
+<pre><span class="k">if not</span> path.exists():
+    <span class="k">return</span> 0.0, 0.0, False      <span class="c"># untrained: the subject says thetas start at 0</span></pre>
+<ul>
+  <li><strong>No file means not trained</strong>, so both thetas are 0, as the subject requires (“Before running the training program, theta0 and theta1 will be set to 0”).</li>
+  <li><strong>A corrupt file is an error</strong>, not silently 0. Silently using 0 would hide a real problem.</li>
+  <li><strong>JSON format</strong> (<code>{"theta0": …, "theta1": …}</code>): readable by a human and parsed by the standard library.</li>
+  <li><strong>Atomic save</strong>: write to <code>thetas.json.tmp</code>, then <code>os.replace</code> it over the real file. If the program crashes mid-write, the old file is still intact.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="train"><code>train.py</code>: the learning program</h2>
+
+<h3><code>gradient_descent</code>: the core of the project</h3>
+<pre><span class="k">for</span> _ <span class="k">in</span> range(iterations):
+    sum_errors = 0.0
+    sum_errors_times_mileage = 0.0
+    <span class="k">for</span> i <span class="k">in</span> range(m):
+        error = estimate_price(mileages[i], theta0, theta1) - prices[i]
+        sum_errors += error
+        sum_errors_times_mileage += error * mileages[i]
+
+<span class="hl">    tmp_theta0 = learning_rate * (1 / m) * sum_errors</span>
+<span class="hl">    tmp_theta1 = learning_rate * (1 / m) * sum_errors_times_mileage</span>
+
+    <span class="c"># Simultaneous update: both tmp values above were computed with the</span>
+    <span class="c"># OLD theta0 and theta1. Only now do we change them.</span>
+    theta0 = theta0 - tmp_theta0
+    theta1 = theta1 - tmp_theta1</pre>
+<p>Line by line:</p>
+<ol>
+  <li>The inner loop goes over <var>i</var> = 0 … m−1, which is the Σ in the subject.</li>
+  <li><code>error</code> is <code>estimatePrice(mileage[i]) − price[i]</code>, computed with the <em>current</em> thetas.</li>
+  <li>The two highlighted lines are the subject's formulas word for word, including the <code>(1 / m)</code>.</li>
+  <li>Both tmp values are computed <em>before</em> either theta changes. That is the simultaneous update.</li>
+  <li>We subtract, because the gradient points uphill and we want to go down.</li>
+</ol>
+<p>The loops are written in plain Python on purpose, without vector tricks, so the evaluator sees the formula directly. With 24 rows × 1&#8239;000 iterations it takes milliseconds.</p>
+
+<h3>Divergence detection</h3>
+<pre>current_cost = cost(mileages, prices, theta0, theta1)
+<span class="k">if not</span> (math.isfinite(theta0) <span class="k">and</span> math.isfinite(theta1) <span class="k">and</span> math.isfinite(current_cost)):
+    <span class="k">raise</span> DivergenceError(...)</pre>
+<p>With a too-large learning rate, the thetas grow until they become <code>inf</code> or <code>nan</code>. Without this check, <code>train.py</code> would save <code>NaN</code>
+to <code>thetas.json</code> and <code>predict.py</code> would print <code>nan</code>. We stop and explain instead, and nothing is saved.</p>
+<div class="callout"><strong>A real bug the tests caught</strong>
+<code>cost</code> uses <code>error * error</code>, not <code>error ** 2</code>. In Python, <code>float ** 2</code> raises <code>OverflowError</code> on overflow,
+while <code>float * float</code> returns <code>inf</code>. The first version used <code>** 2</code> and crashed with a traceback when training diverged. The test
+<code>test_train_reports_divergence_cleanly</code> found it.</div>
+
+<h3><code>cost</code></h3>
+<p>J = (1/2m) Σ error². It is not needed to compute the update; the update only uses the derivatives. We compute it to print progress
+(“Cost: 20880519.29 → 222822.62”), to detect divergence, and for the tests that check the cost never increases.</p>
+
+<h3><code>standardize</code> and <code>denormalize</code></h3>
+<pre>scaled, mean, std = standardize(mileages)                 <span class="c"># x' = (x - mean) / std</span>
+theta0_n, theta1_n, history = gradient_descent(scaled, prices, lr, iterations)
+theta0, theta1 = denormalize(theta0_n, theta1_n, mean, std)  <span class="c"># back to raw km</span></pre>
+<p>See <a href="concepts.html#scaling">Concepts §5</a> for the maths. Note the guard in <code>standardize</code>: if every mileage is identical, σ = 0 and we would divide by zero.
+More importantly, a line through points that all share the same x is undefined, so we report that clearly.</p>
+<p><code>mean_and_std</code> uses the <em>population</em> standard deviation (divide by m). Dividing by m−1 (the sample version) would also work, because the conversion back undoes whichever σ we used.</p>
+
+<h3>Command-line options</h3>
+<div class="table-wrap"><table>
+  <tr><th>Option</th><th>Default</th><th>Why it exists</th></tr>
+  <tr><td><code>--data</code></td><td><code>data.csv</code></td><td>Train on another dataset.</td></tr>
+  <tr><td><code>--output</code></td><td><code>thetas.json</code></td><td>Lets the tests write to a temporary folder.</td></tr>
+  <tr><td><code>--learning-rate</code></td><td>0.1</td><td>Experiments. Must be &gt; 0 (checked by <code>positive_float</code>).</td></tr>
+  <tr><td><code>--iterations</code></td><td>1000</td><td>Experiments. Must be a positive integer.</td></tr>
+  <tr><td><code>--no-normalize</code></td><td>off</td><td>Shows what goes wrong without feature scaling.</td></tr>
+</table></div>
+<p>Paths default to the project folder (<code>Path(__file__).resolve().parent</code>), not the current directory, so the programs work from anywhere.</p>
+
+<!-- ================================================================ -->
+<h2 id="predict"><code>predict.py</code>: the prediction program</h2>
+<pre>theta0, theta1, trained = load_thetas(args.thetas)
+<span class="k">if not</span> trained:
+    print(<span class="s">"Note: model not trained yet, using theta0 = 0 and theta1 = 0."</span>)
+mileage = ask_mileage()
+price = estimate_price(mileage, theta0, theta1)
+print(f<span class="s">"Estimated price for {mileage:g} km: {price:.2f}"</span>)</pre>
+<p>The subject: “When you launch the program, it should prompt you for a mileage, and then give you back the estimated price.” So it prompts with <code>input()</code>; the mileage is not a command-line argument.</p>
+<h3>Input handling in <code>ask_mileage</code></h3>
+<div class="table-wrap"><table>
+  <tr><th>Input</th><th>Result</th></tr>
+  <tr><td><code>abc</code>, empty line, <code>nan</code>, <code>inf</code>, <code>1e400</code></td><td>“Invalid mileage: …” and ask again</td></tr>
+  <tr><td><code>-5</code></td><td>“it cannot be negative” and ask again</td></tr>
+  <tr><td><code>0</code>, <code>42000</code>, <code>1.5e5</code>, <code>  80000  </code></td><td>accepted (spaces are stripped)</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>D</kbd> (EOF)</td><td>clean exit, code 1, no traceback</td></tr>
+  <tr><td><kbd>Ctrl</kbd>+<kbd>C</kbd></td><td>clean exit, code 130 (the shell convention for SIGINT)</td></tr>
+</table></div>
+<p>A very large mileage gives a negative price. We still print the number, because that <em>is</em> what the hypothesis says, and add a warning that it is outside the data. Hiding it or clamping it to 0 would mean not using the specified hypothesis.</p>
+
+<!-- ================================================================ -->
+<h2 id="bonus">Bonus programs</h2>
+<h3><code>precision.py</code></h3>
+<p><code>compute_metrics</code> builds the error list once and derives MAE, MSE, RMSE and R² by hand. The edge case where every price is identical (R²'s denominator is 0) is handled explicitly.
+See <a href="concepts.html#metrics">Concepts §6</a> for what each metric means.</p>
+<h3><code>plot.py</code></h3>
+<p>Scatter of the data, plus the line from <code>thetas.json</code>. A straight line needs only two points, so we compute <code>estimate_price</code> at the min and max mileage and join them.
+<code>--save plot.png</code> writes a file instead of opening a window, which is useful over SSH or without a display. <code>matplotlib</code> is imported inside <code>main()</code> after the arguments are parsed, so <code>--help</code> stays fast.</p>
+
+<!-- ================================================================ -->
+<h2 id="tests">The tests</h2>
+<p>Run with <code>uv run pytest -v</code>. The most important ones:</p>
+<div class="table-wrap"><table>
+  <tr><th>Test</th><th>What it proves</th></tr>
+  <tr><td><code>test_gradient_descent_matches_closed_form_on_project_data</code></td><td>Our trained thetas equal the exact least-squares answer (θ1 = cov/var) to 6 significant digits. Gradient descent really found the minimum.</td></tr>
+  <tr><td><code>test_first_step_uses_subject_formula…</code></td><td>One step from (0, 0) gives exactly what the subject's formula gives by hand.</td></tr>
+  <tr><td><code>test_second_step_uses_old_thetas_for_both_gradients</code></td><td>The simultaneous update: the second step uses old thetas for both gradients. A sequential-update bug fails this test.</td></tr>
+  <tr><td><code>test_cost_never_increases_with_small_learning_rate</code></td><td>Each step goes downhill.</td></tr>
+  <tr><td><code>test_predict_before_training_gives_zero</code></td><td>The subject rule: before training, the prediction is 0.</td></tr>
+  <tr><td><code>test_train_reports_divergence_cleanly</code></td><td>A bad learning rate gives a message, not a traceback, and no file is written.</td></tr>
+  <tr><td><code>test_bad_datasets_raise_model_error</code></td><td>Seven kinds of broken CSV are all rejected cleanly.</td></tr>
+</table></div>
+<p>The closed-form formula appears <strong>only in the tests</strong>, as an independent referee. Using it in <code>train.py</code> would break the subject's rule that training must use gradient descent.</p>
+
+<!-- ================================================================ -->
+<h2 id="uv">uv in two minutes</h2>
+<ul>
+  <li><code>pyproject.toml</code> declares the dependencies (<code>matplotlib</code> for the bonus, <code>pytest</code> in the <code>dev</code> group).</li>
+  <li><code>uv.lock</code> pins the exact versions, so every machine installs the same thing.</li>
+  <li><code>uv sync</code> creates <code>.venv/</code> and installs from the lock file.</li>
+  <li><code>uv run script.py</code> runs the script inside that environment, with no manual activation needed.</li>
+  <li><code>package = false</code> tells uv this is a set of scripts, not an installable library.</li>
+</ul>
+</main>
+
+<footer>Next: <a href="playground.html">Playground →</a></footer>
+</body>
+</html>

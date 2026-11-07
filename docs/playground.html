@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Gradient Descent Playground</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav"><div class="inner">
+  <a class="brand" href="index.html">ft_linear_regression</a>
+  <a href="index.html">Study plan</a>
+  <a href="concepts.html">Concepts</a>
+  <a href="code.html">Code walkthrough</a>
+  <a href="playground.html" aria-current="page">Playground</a>
+  <a href="defense.html">Defense prep</a>
+</div></nav>
+
+<main class="wide">
+<header class="page">
+  <div class="eyebrow">Playground</div>
+  <h1>Watch gradient descent learn</h1>
+  <p class="lead">The same algorithm as <code>train.py</code>, run in your browser on the real <code>data.csv</code>. Step through it, change the learning rate, switch off normalization, and break it on purpose.</p>
+</header>
+
+<div class="controls">
+  <div>
+    <label for="lr">Learning rate α: <strong id="lr-out"></strong></label>
+    <input id="lr" type="number" step="any" min="0" value="0.1" style="width:100%;font:inherit;padding:6px 8px;border-radius:8px;border:1px solid var(--border);background:var(--surface);color:var(--text)">
+    <div class="buttons" style="margin:6px 0 0" id="presets"></div>
+  </div>
+  <div>
+    <label><input type="checkbox" id="normalize" checked> Standardize mileage (as <code>train.py</code> does)</label>
+    <label style="margin-top:8px"><input type="checkbox" id="residuals" checked> Show errors (residuals)</label>
+    <label style="margin-top:8px" for="speed">Steps per frame when running: <strong id="speed-out">1</strong></label>
+    <input id="speed" type="range" min="1" max="50" value="1">
+  </div>
+</div>
+
+<div class="buttons">
+  <button class="primary" id="step">Step</button>
+  <button id="step10">10 steps</button>
+  <button id="run">Run</button>
+  <button id="reset">Reset to θ = 0</button>
+</div>
+
+<div id="message" class="callout warn" hidden></div>
+
+<div class="stats">
+  <div class="stat"><div class="label">Iteration</div><div class="value" id="s-iter">0</div></div>
+  <div class="stat"><div class="label">θ0 (raw km)</div><div class="value" id="s-t0">0</div></div>
+  <div class="stat"><div class="label">θ1 (raw km)</div><div class="value" id="s-t1">0</div></div>
+  <div class="stat"><div class="label">Cost J</div><div class="value" id="s-cost">0</div></div>
+  <div class="stat"><div class="label">last tmpθ0</div><div class="value" id="s-g0">—</div></div>
+  <div class="stat"><div class="label">last tmpθ1</div><div class="value" id="s-g1">—</div></div>
+</div>
+
+<div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(320px,1fr))">
+  <figure style="margin:0"><div class="chart" id="scatter"></div><figcaption>Data and the current line</figcaption></figure>
+  <figure style="margin:0"><div class="chart" id="curve"></div><figcaption>log<sub>10</sub>(cost) at each iteration</figcaption></figure>
+</div>
+
+<h2>Manual mode</h2>
+<p>Move the line yourself and try to beat gradient descent. Moving a slider replaces the current thetas; press <em>Step</em> afterwards to let gradient descent continue from there.</p>
+<div class="controls">
+  <div><label for="m0">θ0 (intercept): <strong id="m0-out"></strong></label><input id="m0" type="range" min="0" max="12000" step="10" value="0"></div>
+  <div><label for="m1">θ1 (slope): <strong id="m1-out"></strong></label><input id="m1" type="range" min="-0.05" max="0.03" step="0.0001" value="0"></div>
+</div>
+<p style="color:var(--muted);font-size:15px">Best possible: θ0 ≈ 8&#8239;499.60, θ1 ≈ −0.021449, cost ≈ 222&#8239;822.62.</p>
+
+<h2>Experiments to try</h2>
+<ol>
+  <li><strong>Normal run.</strong> α = 0.1, normalized. Press <em>Run</em>. The cost drops fast and flattens out within about 100–200 iterations.</li>
+  <li><strong>One-step magic.</strong> α = 1, normalized, press <em>Step</em> once. You land exactly on the minimum. (<a href="concepts.html#scaling">Why?</a>)</li>
+  <li><strong>Oscillation.</strong> α = 1.9. The line jumps from one side to the other but still settles.</li>
+  <li><strong>Divergence.</strong> α = 2.1. Every jump overshoots more than the last and the cost explodes.</li>
+  <li><strong>Too slow.</strong> α = 0.01. It works, but it needs many more iterations.</li>
+  <li><strong>No normalization.</strong> Untick “Standardize”, set α = 1e-10 and run. θ0 hardly moves from 0, and the line rotates to a wrong, <em>rising</em> slope. Then try α = 1e-9: it diverges.</li>
+  <li><strong>Start somewhere else.</strong> Put the line somewhere silly with the sliders, then run. It always ends at the same minimum, because the cost is a bowl with one bottom.</li>
+</ol>
+</main>
+
+<footer>Next: <a href="defense.html">Defense prep →</a></footer>
+
+<script src="charts.js"></script>
+<script>
+(function () {
+  const $ = id => document.getElementById(id);
+  const { mean, std } = meanStd(DATA.km);
+  const scaledKm = DATA.km.map(x => (x - mean) / std);
+
+  // State is always stored in the space we train in (scaled or raw km).
+  let t0 = 0, t1 = 0, iter = 0, history = [], last = null, timer = null, normalized = true;
+
+  const xs = () => normalized ? scaledKm : DATA.km;
+  const toRaw = () => normalized ? [t0 - t1 * mean / std, t1 / std] : [t0, t1];
+  const fromRaw = (r0, r1) => normalized ? [r0 + r1 * mean, r1 * std] : [r0, r1];
+  const lr = () => parseFloat($("lr").value);
+
+  function fmtNum(n, digits) {
+    if (!Number.isFinite(n)) return String(n);
+    const a = Math.abs(n);
+    if (a !== 0 && (a < 1e-4 || a >= 1e9)) return n.toExponential(3);
+    return n.toLocaleString("en-US", { maximumFractionDigits: digits });
+  }
+
+  function reset() {
+    stop(); t0 = 0; t1 = 0; iter = 0; last = null;
+    history = [costOf(xs(), DATA.price, 0, 0)];
+    $("message").hidden = true;
+    render();
+  }
+
+  function step(n) {
+    const a = lr();
+    if (!(a > 0)) { showMessage("The learning rate must be a positive number."); stop(); return; }
+    for (let k = 0; k < n; k++) {
+      const [n0, n1] = gradientStep(xs(), DATA.price, t0, t1, a);
+      last = [t0 - n0, t1 - n1];        // the tmp values (step taken)
+      t0 = n0; t1 = n1; iter++;
+      const c = costOf(xs(), DATA.price, t0, t1);
+      history.push(c);
+      if (!Number.isFinite(c) || !Number.isFinite(t0) || !Number.isFinite(t1) || c > 1e30) {
+        stop();
+        showMessage("Diverged after " + iter + " iterations: the learning rate is too large, so every step overshoots the minimum further. train.py stops with an error in this case.");
+        break;
+      }
+    }
+    render();
+  }
+
+  function showMessage(text) { $("message").textContent = text; $("message").hidden = false; }
+
+  function run() {
+    if (timer) { stop(); return; }
+    $("run").textContent = "Pause";
+    const tick = () => { step(+$("speed").value); if (timer) timer = requestAnimationFrame(tick); };
+    timer = requestAnimationFrame(tick);
+  }
+  function stop() { if (timer) cancelAnimationFrame(timer); timer = null; $("run").textContent = "Run"; }
+
+  function render() {
+    const [r0, r1] = toRaw();
+    $("s-iter").textContent = iter;
+    $("s-t0").textContent = fmtNum(r0, 2);
+    $("s-t1").textContent = fmtNum(r1, 6);
+    $("s-cost").textContent = fmtNum(history[history.length - 1], 0);
+    $("s-g0").textContent = last ? fmtNum(last[0], 4) : "—";
+    $("s-g1").textContent = last ? fmtNum(last[1], 6) : "—";
+    $("lr-out").textContent = lr();
+    drawScatter($("scatter"), { theta0: Number.isFinite(r0) ? r0 : 0, theta1: Number.isFinite(r1) ? r1 : 0,
+      residuals: $("residuals").checked, yDomain: [0, 11000], height: 380 });
+    const its = history.map((_, i) => i);
+    const logs = history.map(c => Math.log10(Math.max(c, 1)));
+    drawCurve($("curve"), its.length > 1 ? its : [0, 1], logs.length > 1 ? logs : [logs[0], logs[0]],
+      { xLabel: "iteration", yLabel: "log10(cost)", height: 380 });
+    $("m0").value = Math.min(12000, Math.max(0, r0)); $("m0-out").textContent = fmtNum(r0, 2);
+    $("m1").value = Math.min(0.03, Math.max(-0.05, r1)); $("m1-out").textContent = fmtNum(r1, 6);
+  }
+
+  function manual() {
+    stop();
+    [t0, t1] = fromRaw(+$("m0").value, +$("m1").value);
+    last = null;
+    history.push(costOf(xs(), DATA.price, t0, t1));
+    $("message").hidden = true;
+    render();
+  }
+
+  [["0.01", 0.01], ["0.1", 0.1], ["1", 1], ["1.9", 1.9], ["2.1", 2.1], ["1e-10", 1e-10]].forEach(([label, v]) => {
+    const b = document.createElement("button");
+    b.type = "button"; b.textContent = label; b.style.fontSize = "13px"; b.style.padding = "2px 10px";
+    b.addEventListener("click", () => { $("lr").value = v; render(); });
+    $("presets").appendChild(b);
+  });
+
+  $("step").addEventListener("click", () => { stop(); step(1); });
+  $("step10").addEventListener("click", () => { stop(); step(10); });
+  $("run").addEventListener("click", run);
+  $("reset").addEventListener("click", reset);
+  $("lr").addEventListener("input", render);
+  $("residuals").addEventListener("change", render);
+  $("speed").addEventListener("input", () => { $("speed-out").textContent = $("speed").value; });
+  $("normalize").addEventListener("change", () => { normalized = $("normalize").checked; reset(); });
+  $("m0").addEventListener("input", manual);
+  $("m1").addEventListener("input", manual);
+
+  reset();
+})();
+</script>
+</body>
+</html>

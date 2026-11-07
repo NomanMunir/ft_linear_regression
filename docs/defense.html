@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Defense Prep</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav"><div class="inner">
+  <a class="brand" href="index.html">ft_linear_regression</a>
+  <a href="index.html">Study plan</a>
+  <a href="concepts.html">Concepts</a>
+  <a href="code.html">Code walkthrough</a>
+  <a href="playground.html">Playground</a>
+  <a href="defense.html" aria-current="page">Defense prep</a>
+</div></nav>
+
+<main>
+<header class="page">
+  <div class="eyebrow">Defense prep</div>
+  <h1>Be ready for the evaluator</h1>
+  <p class="lead">The checks a peer will run, the questions they are likely to ask, and a challenge to prove you could rebuild the project alone.</p>
+</header>
+
+<h2 id="checklist">Evaluation checklist</h2>
+<p>The subject lists three things the evaluator <em>must</em> check. Run each check yourself before the defense.</p>
+
+<div class="card">
+<h3 style="margin-top:0">1. No library does the work</h3>
+<pre>grep -n "import" *.py</pre>
+<p>Expected: <code>train.py</code>, <code>predict.py</code> and <code>model.py</code> import only standard modules (<code>argparse</code>, <code>csv</code>, <code>json</code>, <code>math</code>, <code>os</code>, <code>pathlib</code>, <code>sys</code>) and our own <code>model</code>.
+No numpy, pandas or scikit-learn anywhere. <code>matplotlib</code> appears only in <code>plot.py</code> (bonus), and only to draw.</p>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">2. The specified hypothesis</h3>
+<p>Show <code>estimate_price</code> in <code>model.py</code>: <code>return theta0 + (theta1 * mileage)</code>. Show that <code>predict.py</code> calls it on the raw mileage, and that <code>train.py</code> calls the same function inside the loop.</p>
+<pre>rm -f thetas.json
+uv run predict.py        <span class="c"># enter 50000 -> "Note: model not trained yet" ... 0.00</span>
+uv run train.py
+uv run predict.py        <span class="c"># enter 50000 -> about 7427.15</span></pre>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">3. The specified training function</h3>
+<p>Show the two <code>tmp_theta</code> lines in <code>gradient_descent</code> (<code>train.py</code>) and the simultaneous update right after them. Be ready to explain feature scaling: it changes the input, not the formula.</p>
+<pre>uv run pytest -v -k "subject_formula or old_thetas or closed_form"</pre>
+</div>
+
+<div class="card">
+<h3 style="margin-top:0">Things evaluators like to try</h3>
+<ul>
+  <li>Bad input to <code>predict.py</code>: letters, negative numbers, empty line, <kbd>Ctrl</kbd>+<kbd>D</kbd>, <kbd>Ctrl</kbd>+<kbd>C</kbd>. No traceback should ever appear.</li>
+  <li>Deleting or corrupting <code>thetas.json</code> (<code>echo garbage &gt; thetas.json</code>).</li>
+  <li>Training on a broken or empty CSV (<code>uv run train.py --data /dev/null</code>).</li>
+  <li>A silly learning rate (<code>--learning-rate 5</code>): clean “diverged” message.</li>
+  <li>Comparing your result with a reference. Our θ0 ≈ 8499.60 and θ1 ≈ −0.0214490 equal the exact least-squares solution.</li>
+  <li>Bonus: <code>uv run plot.py</code> and <code>uv run precision.py</code>. Remember that bonuses are only graded if the mandatory part is perfect.</li>
+</ul>
+</div>
+
+<h2 id="questions">Questions you should be able to answer</h2>
+<p>Say each answer <strong>out loud</strong> before opening it. If you hesitate, go back to the linked section.</p>
+
+<h3>The basics</h3>
+<details><summary>What is m?</summary><p>The number of training examples, the rows in <code>data.csv</code>: 24. The subject's Σ goes from i = 0 to m − 1, so it covers every example.</p></details>
+<details><summary>What do θ0 and θ1 represent? What are their values and units?</summary><p>θ0 is the intercept: the predicted price at 0 km, ≈ 8&#8239;499.60 (price units). θ1 is the slope: price change per km, ≈ −0.021449 (price per km). The car loses about 21.45 per 1&#8239;000 km.</p></details>
+<details><summary>Why are θ0 and θ1 set to 0 before training?</summary><p>The subject requires it. Mathematically the starting point does not matter here: the cost is convex (a bowl), so gradient descent reaches the same minimum from anywhere. Only the number of steps changes.</p></details>
+<details><summary>Is this supervised or unsupervised? Regression or classification?</summary><p>Supervised, because each example has its true price. Regression, because the output is a continuous number.</p></details>
+<details><summary>Explain the Mitchell definition for this project.</summary><p>T = predicting price from mileage. E = the 24 examples. P = the cost (mean squared error). P improves from ~20.9 million to ~222&#8239;823 as the program trains on E, so it learns. <a href="concepts.html#ml">§1</a></p></details>
+
+<h3>Gradient descent</h3>
+<details><summary>What does gradient descent do, in one sentence?</summary><p>It repeatedly moves the parameters a small step in the direction that decreases the cost fastest (the negative gradient) until the cost stops decreasing.</p></details>
+<details><summary>Where do the subject's formulas come from?</summary><p>They are the partial derivatives of the cost J = (1/2m) Σ (θ0 + θ1·xᵢ − yᵢ)² with respect to θ0 and θ1, multiplied by the learning rate. The ½ cancels the 2 from the power rule; the chain rule adds a factor 1 for θ0 and xᵢ for θ1. Be ready to derive this on a whiteboard. <a href="concepts.html#gd">§4</a></p></details>
+<details><summary>Why subtract tmpθ rather than add it?</summary><p>The gradient points in the direction where the cost <em>increases</em>. We want to decrease it, so we go the opposite way.</p></details>
+<details><summary>What is the simultaneous update and why does it matter?</summary><p>Both tmp values are computed from the same old θ0 and θ1, and only then are both thetas replaced. If you updated θ0 first and used the new θ0 to compute θ1's gradient, you would no longer be following the gradient at one point; it would be a different algorithm. In the code: the two <code>tmp_theta</code> lines come before both assignments. A test checks it.</p></details>
+<details><summary>What is the learning rate and what happens if it is too big or too small?</summary><p>The step size. Too small: very slow convergence. Too big: each step overshoots the minimum further and the cost explodes (divergence). With our normalized data it converges for 0 &lt; α &lt; 2; we use 0.1. Our code detects divergence and stops with a message.</p></details>
+<details><summary>How do you know when to stop? Why 1&#8239;000 iterations?</summary><p>When the cost stops changing meaningfully (convergence). With α = 0.1 the cost is flat after about 200 iterations; 1&#8239;000 is a comfortable margin and still runs in milliseconds. A tolerance-based stop (“stop when the cost changes by less than ε”) is a valid alternative.</p></details>
+<details><summary>Could gradient descent get stuck in a local minimum here?</summary><p>No. The cost of linear regression with squared error is convex, so it has a single global minimum.</p></details>
+<details><summary>Is this batch, stochastic or mini-batch gradient descent?</summary><p>Batch: each step uses all m examples, as in the subject's Σ from 0 to m − 1.</p></details>
+
+<h3>Feature scaling (the most common question)</h3>
+<details><summary>Why do you normalize the mileage?</summary><p>Mileages are around 100&#8239;000 while prices are around 6&#8239;000, so the θ1 gradient is ~100&#8239;000× larger than the θ0 gradient. One learning rate cannot suit both: small enough for θ1 means θ0 never moves; big enough for θ0 makes θ1 explode. Standardizing (x − μ)/σ puts the input on a scale around ±2, so a single learning rate works. Demo: <code>uv run train.py --no-normalize --learning-rate 1e-10</code> gives a wrong, positive slope.</p></details>
+<details><summary>Doesn't normalizing break the “use the specified training function” rule?</summary><p>No. The update formula is applied exactly as written, with the same estimatePrice and simultaneous update. Only the input values are rescaled first. The thetas are then converted back, so <code>predict.py</code> uses the subject's hypothesis on raw km.</p></details>
+<details><summary>How do you convert the thetas back? Derive it.</summary><p>price = θ′0 + θ′1·(x − μ)/σ = (θ′0 − θ′1·μ/σ) + (θ′1/σ)·x. So θ1 = θ′1/σ and θ0 = θ′0 − θ′1·μ/σ. See <code>denormalize</code> in <code>train.py</code> and <a href="concepts.html#scaling">§5</a>.</p></details>
+<details><summary>Why not also normalize the price?</summary><p>It is not needed: only the mismatch between the two gradients causes trouble, and that comes from the mileage. Normalizing the price too would also work, but then you would need a second conversion step.</p></details>
+
+<h3>Results and limits</h3>
+<details><summary>How do you know your result is correct?</summary><p>The test <code>test_gradient_descent_matches_closed_form_on_project_data</code> compares it with the exact least-squares solution θ1 = cov(x, y)/var(x), θ0 = ȳ − θ1·x̄. They agree to 6 significant digits. The closed form is used only in tests, never in the programs.</p></details>
+<details><summary>What do MAE, RMSE and R² tell you? (bonus)</summary><p>MAE ≈ 558: average absolute error. RMSE ≈ 668: like MAE but punishing big errors more, which is why it is larger. R² ≈ 0.733: the line explains 73% of the price variation compared with always guessing the mean. <a href="concepts.html#metrics">§6</a></p></details>
+<details><summary>What does predict.py say for 500&#8239;000 km? Is that right?</summary><p>A negative price (≈ −2&#8239;225), with a warning. The hypothesis is a straight line, so beyond about 396&#8239;000 km it crosses 0. We do not trust predictions far outside the training range (extrapolation). We show the value instead of hiding it, because that is what the specified hypothesis gives.</p></details>
+<details><summary>How would you improve the model?</summary><p>More data; more features (age, brand, condition), which is multivariate linear regression; a non-linear model, since depreciation is curved; and a separate test set to measure precision on cars the model has not seen.</p></details>
+
+<h3>Code and tools</h3>
+<details><summary>Why Python? Why these libraries?</summary><p>The subject allows any language and recommends one that makes visualization easy. Python's standard library covers CSV, JSON and maths, so the mandatory part needs no external library. matplotlib is used only for the bonus plot.</p></details>
+<details><summary>Why is thetas.json not in the repository?</summary><p>It is generated. Committing it would make <code>predict.py</code> appear trained before the evaluator runs <code>train.py</code>, which goes against the “theta0 and theta1 are 0 before training” rule.</p></details>
+<details><summary>What happens if thetas.json is corrupted?</summary><p><code>load_thetas</code> raises <code>ModelError</code> and the program prints a clear error. It does not silently fall back to 0, which would hide the problem. A <em>missing</em> file is different: it means untrained, so 0 is correct.</p></details>
+<details><summary>How did you use AI in this project?</summary><p>Answer honestly; the subject asks for transparency. The README has an “AI usage” section. Make sure it matches what really happened, and that you can explain every line yourself.</p></details>
+
+<h2 id="rebuild">The rebuild challenge</h2>
+<div class="callout key"><strong>The real test of understanding</strong>
+Make an empty folder. Without looking at this repository, write a minimal working version. When you can do this in under an hour, you are ready.</div>
+<ol>
+  <li><code>predict.py</code>: read θ0, θ1 from a file (0 if missing), prompt for a mileage, print θ0 + θ1·mileage.</li>
+  <li><code>train.py</code>: read <code>data.csv</code> with the <code>csv</code> module into two lists.</li>
+  <li>Compute the mean and standard deviation of the mileage; scale it.</li>
+  <li>Write the gradient descent loop from memory: errors, the two sums, the two tmp values, the simultaneous update.</li>
+  <li>Convert the thetas back and save them.</li>
+  <li>Check: you should get θ0 ≈ 8499.60 and θ1 ≈ −0.0214490.</li>
+</ol>
+<details><summary>Stuck? A skeleton for the training loop (try without it first)</summary>
+<pre>theta0, theta1 = 0.0, 0.0
+<span class="k">for</span> _ <span class="k">in</span> range(ITERATIONS):
+    s0 = s1 = 0.0
+    <span class="k">for</span> x, y <span class="k">in</span> zip(xs, ys):
+        error = ____________________
+        s0 += ______
+        s1 += ______
+    tmp0 = LR * (1 / m) * s0
+    tmp1 = ____________________
+    theta0, theta1 = ______________, ______________</pre>
+</details>
+
+<h3>Stretch goals (optional, beyond the subject)</h3>
+<ul>
+  <li>Add a tolerance-based early stop and print how many iterations were actually needed.</li>
+  <li>Use min-max scaling instead and derive its conversion formula.</li>
+  <li>Implement stochastic gradient descent and compare the cost curves.</li>
+  <li>Extend to two features (multivariate) with a made-up “age” column.</li>
+</ul>
+</main>
+
+<footer>Back to the <a href="index.html">study plan</a>.</footer>
+</body>
+</html>

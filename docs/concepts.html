@@ -1,0 +1,312 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear Regression Concepts</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav"><div class="inner">
+  <a class="brand" href="index.html">ft_linear_regression</a>
+  <a href="index.html">Study plan</a>
+  <a href="concepts.html" aria-current="page">Concepts</a>
+  <a href="code.html">Code walkthrough</a>
+  <a href="playground.html">Playground</a>
+  <a href="defense.html">Defense prep</a>
+</div></nav>
+
+<main>
+<header class="page">
+  <div class="eyebrow">Concepts</div>
+  <h1>The maths behind the project</h1>
+  <p class="lead">Everything you need, from zero. Only basic algebra is assumed; the one bit of calculus is explained in full.</p>
+</header>
+
+<div class="card">
+  <strong>Contents</strong>
+  <ol style="margin:6px 0 0">
+    <li><a href="#ml">What is machine learning?</a></li>
+    <li><a href="#hypothesis">The hypothesis: a straight line</a></li>
+    <li><a href="#cost">The cost function: how wrong is a line?</a></li>
+    <li><a href="#gd">Gradient descent: walking downhill</a></li>
+    <li><a href="#scaling">Feature scaling: why we normalize mileage</a></li>
+    <li><a href="#metrics">Measuring precision (bonus)</a></li>
+    <li><a href="#limits">Limits of this model</a></li>
+    <li><a href="#glossary">Glossary</a></li>
+  </ol>
+</div>
+
+<!-- ================================================================ -->
+<h2 id="ml"><span class="num">1</span>What is machine learning?</h2>
+<p>The subject quotes Tom Mitchell:</p>
+<div class="callout"><p>
+  “A computer program is said to learn from <strong>experience E</strong> with respect to some class of <strong>tasks T</strong>
+  and <strong>performance measure P</strong>, if its performance at tasks in T, as measured by P, improves with experience E.”</p>
+</div>
+<p>For this project:</p>
+<div class="table-wrap"><table>
+  <tr><th>Letter</th><th>Meaning</th><th>In ft_linear_regression</th></tr>
+  <tr><td><strong>T</strong></td><td>the task</td><td>predict the price of a car from its mileage</td></tr>
+  <tr><td><strong>E</strong></td><td>the experience</td><td>the 24 (mileage, price) examples in <code>data.csv</code>, seen over and over during training</td></tr>
+  <tr><td><strong>P</strong></td><td>the performance measure</td><td>the cost J (mean squared error). Lower is better.</td></tr>
+</table></div>
+<p>Before training, θ0 = θ1 = 0 and every prediction is 0, so the cost is huge (about 20.9 million).
+After 1&#8239;000 steps of training the cost is about 222&#8239;823. Performance improved with experience, so by Mitchell's definition the program <em>learned</em>.</p>
+
+<h3>Vocabulary</h3>
+<ul>
+  <li><strong>Supervised learning</strong>: every training example has the right answer (the price). The program learns to map input to answer.</li>
+  <li><strong>Regression</strong>: the answer is a continuous number. (Classification would be a category, like “cheap / expensive”.)</li>
+  <li><strong>Feature</strong> (input, <var>x</var>): the mileage. We have exactly <em>one</em> feature, so this is <em>simple</em> (univariate) linear regression.</li>
+  <li><strong>Target</strong> (label, <var>y</var>): the price.</li>
+  <li><strong>Parameters</strong> (weights): θ0 and θ1, the numbers the program learns.</li>
+  <li><strong>m</strong>: the number of training examples. The subject says “I let you guess what m is”. It is the number of data rows: <strong>m = 24</strong>.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="hypothesis"><span class="num">2</span>The hypothesis: a straight line</h2>
+<p>The subject imposes this function:</p>
+<div class="math">estimatePrice(mileage) = θ<sub>0</sub> + (θ<sub>1</sub> × mileage)</div>
+<p>It is the equation of a straight line, the same as <var>y</var> = <var>b</var> + <var>a</var><var>x</var> from school:</p>
+<ul>
+  <li><strong>θ0, the intercept</strong>: the predicted price when mileage = 0. The point where the line crosses the vertical axis. Unit: price.</li>
+  <li><strong>θ1, the slope</strong>: how much the price changes for each extra kilometre. Negative here, because cars lose value as they are driven. Unit: price per km.</li>
+</ul>
+<p>After training we get <strong>θ0 ≈ 8&#8239;499.60</strong> and <strong>θ1 ≈ −0.021449</strong>. Read it as: “a car with 0 km would cost about 8&#8239;500,
+and it loses about 21.45 for every 1&#8239;000 km driven.” So for 100&#8239;000 km: 8&#8239;499.60 − 0.021449 × 100&#8239;000 ≈ <strong>6&#8239;354.70</strong>.</p>
+<div class="callout key"><strong>Training is a search</strong>
+Every possible pair (θ0, θ1) is a different line. Training means finding the pair whose line fits the data best.
+To search, we first need a number that says how good a line is. That is the cost function.</div>
+
+<!-- ================================================================ -->
+<h2 id="cost"><span class="num">3</span>The cost function: how wrong is a line?</h2>
+<p>For each example <var>i</var>, the <strong>error</strong> (residual) is the difference between the prediction and the truth:</p>
+<div class="math">error<sub><i>i</i></sub> = estimatePrice(mileage<sub><i>i</i></sub>) − price<sub><i>i</i></sub></div>
+<p>In the figure below the dashed lines are these errors for a line drawn by hand (θ0 = 8&#8239;000, θ1 = −0.015). A good line keeps them short.</p>
+<figure><div class="chart" id="fig-residuals"></div>
+<figcaption>Data points (blue), a candidate line (red) and its errors (dashed). Training makes the dashed lines as short as possible overall.</figcaption></figure>
+
+<p>To get one number for the whole dataset, we square each error and take the average. That is the <strong>mean squared error</strong>.
+We also divide by 2, which makes the derivative cleaner (see §4):</p>
+<div class="math">J(θ<sub>0</sub>, θ<sub>1</sub>) = <span class="frac"><span>1</span><span>2m</span></span> <span class="big">Σ</span><sub><i>i</i>=0</sub><sup>m−1</sup> ( estimatePrice(mileage<sub><i>i</i></sub>) − price<sub><i>i</i></sub> )<sup>2</sup></div>
+
+<h3>Why square the errors?</h3>
+<ol>
+  <li><strong>Signs would cancel.</strong> An error of +1&#8239;000 and one of −1&#8239;000 add up to 0, which would look like a perfect line. Squaring makes every error positive.</li>
+  <li><strong>Big errors count more.</strong> An error of 2&#8239;000 costs 4× more than one of 1&#8239;000, so the line will not ignore points that are far off.</li>
+  <li><strong>It is smooth.</strong> Unlike absolute value, a square has a derivative everywhere. Gradient descent needs that.</li>
+  <li><strong>One minimum, no traps.</strong> For linear regression, J is a “bowl” (convex). There is exactly one lowest point and no local minimum to get stuck in.</li>
+</ol>
+
+<details><summary>Worked example: the cost for the first 3 rows</summary>
+<p>Rows: (240&#8239;000, 3&#8239;650), (139&#8239;800, 3&#8239;800), (150&#8239;500, 4&#8239;400). Here m = 3.</p>
+<p><strong>J(0, 0):</strong> every prediction is 0, so the errors are −3&#8239;650, −3&#8239;800, −4&#8239;400.
+Squares: 13&#8239;322&#8239;500 + 14&#8239;440&#8239;000 + 19&#8239;360&#8239;000 = 47&#8239;122&#8239;500. Divide by 2m = 6: <strong>J ≈ 7&#8239;853&#8239;750</strong>.</p>
+<p><strong>J(8&#8239;000, −0.02):</strong> predictions are 3&#8239;200, 5&#8239;204, 4&#8239;990. Errors are −450, +1&#8239;404, +590.
+Squares: 202&#8239;500 + 1&#8239;971&#8239;216 + 348&#8239;100 = 2&#8239;521&#8239;816. Divide by 6: <strong>J ≈ 420&#8239;303</strong>. A much better line.</p>
+</details>
+
+<!-- ================================================================ -->
+<h2 id="gd"><span class="num">4</span>Gradient descent: walking downhill</h2>
+
+<h3>The intuition</h3>
+<p>Picture the cost J as a landscape. Each position (θ0, θ1) has a height J. You stand somewhere on a hill in fog and want to reach the
+bottom of the valley. You cannot see the valley, but you can feel the slope under your feet. So: <strong>take a small step in the
+steepest downhill direction, then repeat.</strong> That is gradient descent.</p>
+<figure><div class="chart" id="fig-bowl"></div>
+<figcaption>Cost J as a function of θ1 alone (θ0 fixed at its best value). The curve is a bowl with one bottom, at θ1 ≈ −0.02145.
+The slope of the curve tells you which way to step.</figcaption></figure>
+
+<h3>The one bit of calculus you need</h3>
+<p>The <strong>derivative</strong> of a function is its slope: how much the output changes when you nudge the input a tiny bit.
+A <strong>partial derivative</strong> ∂J/∂θ0 is the slope in the θ0 direction while θ1 is held still. The two partial derivatives together form the <strong>gradient</strong>, which points uphill.</p>
+<p>Two rules are enough:</p>
+<ul>
+  <li><strong>Power rule:</strong> the derivative of <var>u</var><sup>2</sup> is 2<var>u</var>.</li>
+  <li><strong>Chain rule:</strong> the derivative of <var>f</var>(<var>g</var>(θ)) is <var>f</var>′(<var>g</var>(θ)) × <var>g</var>′(θ). In words: the derivative of the outside times the derivative of the inside.</li>
+</ul>
+
+<h3>Deriving the subject's formulas</h3>
+<p>Write e<sub><i>i</i></sub> = θ0 + θ1·x<sub><i>i</i></sub> − y<sub><i>i</i></sub> for the error on example <var>i</var>, so J = (1/2m) Σ e<sub><i>i</i></sub><sup>2</sup>.</p>
+<p>The inside, e<sub><i>i</i></sub>, depends on the thetas like this:</p>
+<ul>
+  <li>∂e<sub><i>i</i></sub>/∂θ0 = 1 (θ0 is added once)</li>
+  <li>∂e<sub><i>i</i></sub>/∂θ1 = x<sub><i>i</i></sub> (θ1 is multiplied by x<sub><i>i</i></sub>)</li>
+</ul>
+<p>Chain rule on e<sub><i>i</i></sub><sup>2</sup>: the outside gives 2e<sub><i>i</i></sub>, times the inside's derivative. The 2 cancels with the ½:</p>
+<div class="math">
+  <span class="frac"><span>∂J</span><span>∂θ<sub>0</sub></span></span> = <span class="frac"><span>1</span><span>2m</span></span> Σ 2·e<sub><i>i</i></sub>·1 = <span class="frac"><span>1</span><span>m</span></span> Σ e<sub><i>i</i></sub>
+  &nbsp;&nbsp;&nbsp;&nbsp;
+  <span class="frac"><span>∂J</span><span>∂θ<sub>1</sub></span></span> = <span class="frac"><span>1</span><span>m</span></span> Σ e<sub><i>i</i></sub>·x<sub><i>i</i></sub>
+</div>
+<p>Multiply each by the learning rate and you have <strong>exactly the formulas in the subject</strong>:</p>
+<div class="math">
+  tmpθ<sub>0</sub> = learningRate × <span class="frac"><span>1</span><span>m</span></span> Σ<sub><i>i</i>=0</sub><sup>m−1</sup> (estimatePrice(mileage<sub><i>i</i></sub>) − price<sub><i>i</i></sub>)<br>
+  tmpθ<sub>1</sub> = learningRate × <span class="frac"><span>1</span><span>m</span></span> Σ<sub><i>i</i>=0</sub><sup>m−1</sup> (estimatePrice(mileage<sub><i>i</i></sub>) − price<sub><i>i</i></sub>) × mileage<sub><i>i</i></sub>
+</div>
+<p>tmpθ is “learning rate × gradient”. The update moves <em>against</em> the gradient, because the gradient points uphill:</p>
+<div class="math">θ<sub>0</sub> := θ<sub>0</sub> − tmpθ<sub>0</sub> &nbsp;&nbsp;&nbsp; θ<sub>1</sub> := θ<sub>1</sub> − tmpθ<sub>1</sub>
+<span class="note">The subject does not write this line, but it is what “update theta0 and theta1” means in gradient descent.</span></div>
+
+<div class="callout"><strong>Sanity check with intuition</strong>
+Suppose every prediction is too high (all errors positive). Then Σe &gt; 0, so tmpθ0 &gt; 0 and θ0 goes <em>down</em>. The line moves down towards the data. Correct.</div>
+
+<h3>The learning rate (α)</h3>
+<p>The learning rate is the size of each step.</p>
+<ul>
+  <li><strong>Too small:</strong> each step barely moves. You need a huge number of iterations.</li>
+  <li><strong>Good:</strong> the cost drops quickly and then flattens out (converges).</li>
+  <li><strong>Too large:</strong> you jump over the bottom of the bowl, land higher on the other side, and each jump gets bigger. The cost grows to infinity (<strong>divergence</strong>).
+  <code>train.py</code> detects this and stops with an error message.</li>
+</ul>
+<p>With our normalized data, any learning rate between 0 and 2 converges. We use <strong>0.1 with 1&#8239;000 iterations</strong>. It reaches the optimum after about 200 steps, so 1&#8239;000 leaves a wide safety margin.
+Try different values in the <a href="playground.html">Playground</a>.</p>
+
+<h3>Simultaneous update</h3>
+<p>The subject insists: “don't forget to simultaneously update theta0 and theta1”. Both gradients must be computed from the <strong>same old</strong> (θ0, θ1). The wrong way:</p>
+<pre><span class="c"># WRONG: theta1's gradient sees the NEW theta0</span>
+theta0 = theta0 - lr * mean(errors(theta0, theta1))
+theta1 = theta1 - lr * mean(errors(theta0, theta1) * x)   <span class="c"># &lt;- theta0 already changed!</span>
+
+<span class="c"># RIGHT: compute both tmp values first, then assign</span>
+tmp_theta0 = lr * mean(errors(theta0, theta1))
+tmp_theta1 = lr * mean(errors(theta0, theta1) * x)
+theta0 = theta0 - tmp_theta0
+theta1 = theta1 - tmp_theta1</pre>
+<p>The wrong version is no longer gradient descent: it is a different algorithm with different convergence behaviour. That is why the subject calls the values <em>tmp</em>θ.</p>
+
+<h3>Why start at 0?</h3>
+<p>The subject requires θ0 = θ1 = 0 before training. Because J is a bowl with a single minimum, the starting point does not change the final answer. It only changes how many steps it takes.</p>
+
+<details><summary>Batch vs stochastic gradient descent</summary>
+<p>We use <strong>batch</strong> gradient descent: each step uses <em>all</em> m examples (the Σ from 0 to m−1). Stochastic gradient descent uses one example per step,
+and mini-batch uses a small group. They are faster on huge datasets but noisier. With 24 rows, batch is the natural choice, and it is what the subject's formulas describe.</p>
+</details>
+
+<!-- ================================================================ -->
+<h2 id="scaling"><span class="num">5</span>Feature scaling: why we normalize mileage</h2>
+<h3>The problem</h3>
+<p>Mileage goes up to 240&#8239;000. Price is around 3&#8239;650 to 8&#8239;290. Look at the two gradients:</p>
+<ul>
+  <li>∂J/∂θ0 = mean(error), a number about the size of a price.</li>
+  <li>∂J/∂θ1 = mean(error × mileage), about <strong>100&#8239;000 times bigger</strong>, because each term is multiplied by a mileage.</li>
+</ul>
+<p>The same learning rate is used for both. If α is small enough for θ1 not to explode (around 10<sup>−10</sup>), θ0 moves by about 10<sup>−6</sup> per step and would need billions of steps to reach 8&#8239;500.
+If α is big enough for θ0, θ1 explodes. Geometrically, the bowl is stretched into an extremely narrow valley and gradient descent zig-zags between its walls.</p>
+<div class="callout warn"><strong>Try it</strong>
+<code>uv run train.py --no-normalize --learning-rate 0.01</code> diverges.
+<code>uv run train.py --no-normalize --learning-rate 1e-10</code> runs, but gives θ0 ≈ 0.0002 and θ1 ≈ +0.045: a <em>positive</em> slope, which is completely wrong. θ1 was forced to fit the data on its own because θ0 could not move.</div>
+
+<h3>The fix: standardization</h3>
+<p>Before training, rescale the mileage so it has mean 0 and standard deviation 1:</p>
+<div class="math">x′ = <span class="frac"><span>x − μ</span><span>σ</span></span>
+<span class="note">μ = mean mileage ≈ 101&#8239;066 km, σ = standard deviation ≈ 51&#8239;565 km (computed from the dataset)</span></div>
+<p>Now x′ is roughly between −1.5 and +2.7, so both gradients have similar sizes and one learning rate works for both.
+We run <strong>the exact same gradient descent</strong> on (x′, price) and get thetas for the scaled input: θ′0 ≈ 6&#8239;331.83 and θ′1 ≈ −1&#8239;106.02.</p>
+
+<h3>Converting back to raw kilometres</h3>
+<p><code>predict.py</code> must use the subject's hypothesis on raw mileage, so we convert the thetas. Substitute x′ into the line and expand:</p>
+<div class="math">
+price = θ′<sub>0</sub> + θ′<sub>1</sub> · <span class="frac"><span>x − μ</span><span>σ</span></span>
+= <span style="color:var(--accent)">(θ′<sub>0</sub> − <span class="frac"><span>θ′<sub>1</sub>·μ</span><span>σ</span></span>)</span> + <span style="color:var(--blue)">(<span class="frac"><span>θ′<sub>1</sub></span><span>σ</span></span>)</span> · x
+</div>
+<p>Match it with θ0 + θ1·x:</p>
+<div class="math"><span style="color:var(--blue)">θ<sub>1</sub> = θ′<sub>1</sub> / σ</span> &nbsp;&nbsp;&nbsp; <span style="color:var(--accent)">θ<sub>0</sub> = θ′<sub>0</sub> − θ′<sub>1</sub> · μ / σ</span></div>
+<p>Check: θ1 = −1&#8239;106.02 / 51&#8239;565.19 ≈ −0.021449 and θ0 = 6&#8239;331.83 + 1&#8239;106.02 × 101&#8239;066.25 / 51&#8239;565.19 ≈ 8&#8239;499.60.</p>
+<p>The saved thetas are therefore the thetas of a normal line on raw km. <code>predict.py</code> needs no knowledge of μ or σ.</p>
+
+<div class="callout key"><strong>Is this allowed by the subject?</strong>
+Yes. The training formula, the simultaneous update and the hypothesis are all used exactly as written. Normalization only changes the
+units of the input fed to that formula, which is standard practice (the original Stanford course this project comes from teaches it as the next lesson).
+Be ready to explain it in the defense; it is the most common question.</div>
+
+<details><summary>Min-max scaling, the other common option</summary>
+<p>x′ = (x − min) / (max − min) puts every value between 0 and 1. It works too. The conversion back has the same shape with min instead of μ and (max − min) instead of σ.
+We chose standardization because it centres the data at 0. That separates the two gradients completely (see the next box) and gives a clean rule for the learning rate.</p>
+</details>
+
+<details><summary>Advanced: why α &lt; 2 converges, and α = 1 converges in one step</summary>
+<p>J is a quadratic function. Gradient descent on a quadratic is stable when α &lt; 2/λ<sub>max</sub>, where λ<sub>max</sub> is the largest eigenvalue of its Hessian (matrix of second derivatives).
+The Hessian here is [[1, mean(x)], [mean(x), mean(x²)]].</p>
+<ul>
+  <li>With standardized x: mean(x′) = 0 and mean(x′²) = 1, so the Hessian is the identity. Both eigenvalues are 1, so any α &lt; 2 converges. With α = 1, a single step lands exactly on the minimum (you can check: <code>uv run train.py --learning-rate 1 --iterations 1</code>).</li>
+  <li>With raw x: mean(x²) ≈ 1.29 × 10<sup>10</sup>, so α must be below about 1.55 × 10<sup>−10</sup>. The smallest eigenvalue is tiny, so θ0 barely moves. The ratio between the two eigenvalues (the condition number) is enormous.</li>
+</ul>
+</details>
+
+<!-- ================================================================ -->
+<h2 id="metrics"><span class="num">6</span>Measuring precision (bonus)</h2>
+<p><code>precision.py</code> computes four standard metrics on the dataset. Our values after training:</p>
+<div class="table-wrap"><table>
+  <tr><th>Metric</th><th>Formula</th><th class="num">Value</th><th>Meaning</th></tr>
+  <tr><td>MAE</td><td>(1/m) Σ |e<sub><i>i</i></sub>|</td><td class="num">557.84</td><td>On average a prediction is off by about 558.</td></tr>
+  <tr><td>MSE</td><td>(1/m) Σ e<sub><i>i</i></sub><sup>2</sup></td><td class="num">445&#8239;645</td><td>Same as 2 × J. Hard to read because the unit is price².</td></tr>
+  <tr><td>RMSE</td><td>√MSE</td><td class="num">667.57</td><td>MSE back in price units. Larger than MAE because big errors weigh more.</td></tr>
+  <tr><td>R²</td><td>1 − Σe<sup>2</sup> / Σ(y − ȳ)<sup>2</sup></td><td class="num">0.733</td><td>The line explains 73% of the variation in prices.</td></tr>
+</table></div>
+<h3>Understanding R²</h3>
+<p>Compare our line with the dumbest possible model: always predict the mean price (ȳ ≈ 6&#8239;332). R² measures how much of that model's error we removed.</p>
+<ul>
+  <li><strong>R² = 1</strong>: perfect, every point is on the line.</li>
+  <li><strong>R² = 0</strong>: no better than predicting the mean every time.</li>
+  <li><strong>R² &lt; 0</strong>: worse than the mean. This is what you get before training (θ = 0 predicts 0 for every car).</li>
+</ul>
+<p>0.733 is reasonable for one feature: mileage explains most of the price, and the rest depends on things we do not have (model, year, condition…).</p>
+<div class="callout"><strong>RMSE ≥ MAE, always</strong>
+They are equal only when every error has the same size. The bigger the gap, the more the error comes from a few bad points.
+Here the gap is moderate: a few cars, such as the one at 139&#8239;800 km sold for 3&#8239;800, sit far below the line.</div>
+<div class="callout warn"><strong>Honest caveat</strong>
+We measure precision on the same data we trained on. With more data, you would keep a separate <em>test set</em> the model never saw, so you measure how it does on new cars.
+With 24 rows, splitting would leave too little to learn from, so we report training-set metrics and say so.</div>
+
+<!-- ================================================================ -->
+<h2 id="limits"><span class="num">7</span>Limits of this model</h2>
+<ul>
+  <li><strong>Extrapolation.</strong> The data covers 22&#8239;899 to 240&#8239;000 km. At about 396&#8239;000 km the line crosses 0, and beyond that it predicts a negative price. <code>predict.py</code> prints a warning in that case. A line is only trustworthy near the data it learned from.</li>
+  <li><strong>A real depreciation curve is not straight.</strong> Cars lose value fast early and slowly later. A line is a simplification.</li>
+  <li><strong>Little data.</strong> 24 cars is very few. One unusual car moves the line noticeably.</li>
+  <li><strong>One feature.</strong> Brand, age, fuel and condition all matter. Using several features is <em>multivariate</em> linear regression, the natural next step (DSLR and multilayer-perceptron build on these ideas).</li>
+  <li><strong>Correlation, not causation.</strong> The model learns that high mileage goes with low price. It does not know why.</li>
+</ul>
+
+<!-- ================================================================ -->
+<h2 id="glossary"><span class="num">8</span>Glossary</h2>
+<div class="table-wrap"><table>
+  <tr><th>Term</th><th>Meaning</th></tr>
+  <tr><td>Hypothesis</td><td>The model's prediction function, here θ0 + θ1·x.</td></tr>
+  <tr><td>θ0, θ1 (parameters)</td><td>Intercept and slope; the values training learns.</td></tr>
+  <tr><td>m</td><td>Number of training examples (24).</td></tr>
+  <tr><td>Residual / error</td><td>Prediction minus true value for one example.</td></tr>
+  <tr><td>Cost function J</td><td>One number for how bad the current parameters are; here half the mean squared error.</td></tr>
+  <tr><td>Gradient</td><td>The vector of partial derivatives of J; points in the direction where J rises fastest.</td></tr>
+  <tr><td>Learning rate α</td><td>Step size of gradient descent.</td></tr>
+  <tr><td>Iteration / epoch</td><td>One gradient descent step. In batch GD, each step sees all the data, so one iteration is also one epoch.</td></tr>
+  <tr><td>Convergence</td><td>The cost stops decreasing meaningfully; the parameters have reached the minimum.</td></tr>
+  <tr><td>Divergence</td><td>The cost grows without bound because the learning rate is too large.</td></tr>
+  <tr><td>Convex</td><td>Bowl-shaped: any local minimum is the global minimum.</td></tr>
+  <tr><td>Standardization</td><td>Rescaling to mean 0, standard deviation 1: (x − μ)/σ.</td></tr>
+  <tr><td>Closed-form solution</td><td>The exact answer by formula, θ1 = cov(x, y)/var(x). Our tests use it to check gradient descent; the programs do not.</td></tr>
+</table></div>
+</main>
+
+<footer>Next: <a href="code.html">Code walkthrough →</a></footer>
+
+<script src="charts.js"></script>
+<script>
+  drawScatter(document.getElementById("fig-residuals"),
+    { theta0: 8000, theta1: -0.015, residuals: true, yDomain: [2000, 9000], height: 360 });
+
+  (function () {
+    const theta0 = 8499.59964993321;
+    const xs = [], ys = [];
+    for (let t = -0.045; t <= 0.0021; t += 0.0005) { xs.push(t); ys.push(costOf(DATA.km, DATA.price, theta0, t)); }
+    drawCurve(document.getElementById("fig-bowl"), xs, ys, {
+      xLabel: "θ1 (price per km)", yLabel: "cost J", height: 320, yMin: 0,
+      markers: [{ x: -0.021449, y: costOf(DATA.km, DATA.price, theta0, -0.021449), label: "minimum", color: "var(--green)" },
+                { x: 0, y: costOf(DATA.km, DATA.price, theta0, 0), label: "θ1 = 0", color: "var(--blue)" }]
+    });
+  })();
+</script>
+</body>
+</html>

@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Linear Regression Study Plan</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<nav class="topnav"><div class="inner">
+  <a class="brand" href="index.html">ft_linear_regression</a>
+  <a href="index.html" aria-current="page">Study plan</a>
+  <a href="concepts.html">Concepts</a>
+  <a href="code.html">Code walkthrough</a>
+  <a href="playground.html">Playground</a>
+  <a href="defense.html">Defense prep</a>
+</div></nav>
+
+<main>
+<header class="page">
+  <div class="eyebrow">42 · ft_linear_regression · study guide</div>
+  <h1>Learn every line before the defense</h1>
+  <p class="lead">A 7-session plan, about 2 hours each, that takes you from “what is machine learning?” to rewriting
+  the training program from memory and answering any evaluator question.</p>
+</header>
+
+<div class="callout key">
+  <strong>Why this matters</strong>
+  The subject's AI chapter is explicit: you must be able to <em>explain and defend</em> every decision. If an AI wrote
+  code you cannot explain, you fail the defense. This plan gets you from “it works” to “I understand it and
+  could rebuild it alone.” The last session is a full rewrite without looking.
+</div>
+
+<h2>The guides</h2>
+<div class="grid">
+  <a class="card" href="concepts.html"><h3>Concepts</h3><p>The maths, explained slowly: hypothesis, cost, gradient descent, feature scaling, metrics.</p></a>
+  <a class="card" href="code.html"><h3>Code walkthrough</h3><p>Every file and function in this repository and why it is written that way.</p></a>
+  <a class="card" href="playground.html"><h3>Playground</h3><p>Run gradient descent step by step on the real data. Break it on purpose.</p></a>
+  <a class="card" href="defense.html"><h3>Defense prep</h3><p>The evaluation checklist, likely questions with answers, and a from-scratch rewrite challenge.</p></a>
+</div>
+
+<h2>Your progress</h2>
+<div class="progress" aria-hidden="true"><div id="bar"></div></div>
+<p id="progress-text" style="color:var(--muted);font-size:14px;margin:0">0 of 0 tasks done</p>
+<p style="font-size:14px;color:var(--muted)">Checkboxes are saved in this browser only.
+  <button type="button" id="reset" style="font-size:13px;padding:2px 10px;margin-left:6px">Reset</button></p>
+
+<div class="day" data-day="1">
+  <h3>Session 1 <span class="tag">The problem and the data</span><span class="time">~1.5 h</span></h3>
+  <p><strong>Goal:</strong> understand what you are predicting, why it is called “learning”, and what the data looks like.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d1a"><label for="d1a">Read the whole subject (<code>en.subject.pdf</code>), including the AI instructions chapter. Write down the 3 things the evaluator must check.</label></li>
+    <li><input type="checkbox" id="d1b"><label for="d1b">Read <a href="concepts.html#ml">Concepts §1: what is machine learning</a>. Explain the Mitchell definition in your own words, naming E, T and P for this project.</label></li>
+    <li><input type="checkbox" id="d1c"><label for="d1c">Open <code>data.csv</code>. How many rows? What are the min and max mileage and price? (Answers: 24 rows, 22&#8239;899 to 240&#8239;000 km, 3&#8239;650 to 8&#8239;290.)</label></li>
+    <li><input type="checkbox" id="d1d"><label for="d1d">Run <code>uv sync</code>, then <code>uv run plot.py</code> before training. You should see the points and a flat line at 0.</label></li>
+    <li><input type="checkbox" id="d1e"><label for="d1e">On paper, draw a line by eye through the points. Estimate its intercept and slope. Keep the numbers; you will compare them with the trained model later.</label></li>
+  </ul>
+  <details><summary>Check yourself</summary>
+    <p>Is this supervised or unsupervised learning? Regression or classification? Why?<br>
+    <em>Supervised (every row comes with the correct price) and regression (the output is a continuous number, not a category).</em></p>
+  </details>
+</div>
+
+<div class="day" data-day="2">
+  <h3>Session 2 <span class="tag">Hypothesis and cost function</span><span class="time">~2 h</span></h3>
+  <p><strong>Goal:</strong> know exactly what θ0 and θ1 mean and how we measure how bad a line is.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d2a"><label for="d2a">Read <a href="concepts.html#hypothesis">Concepts §2 (hypothesis)</a> and <a href="concepts.html#cost">§3 (cost function)</a>.</label></li>
+    <li><input type="checkbox" id="d2b"><label for="d2b">In the <a href="playground.html">Playground</a>, use <em>manual mode</em>: move θ0 and θ1 with the sliders and try to make the cost as small as you can. Watch the dashed residual lines.</label></li>
+    <li><input type="checkbox" id="d2c"><label for="d2c">By hand, compute the cost J(0, 0) for the first 3 rows of the dataset. Then compute J(8000, −0.02) for the same rows. Which is better?</label></li>
+    <li><input type="checkbox" id="d2d"><label for="d2d">Explain why we <em>square</em> the errors instead of just adding them. (Hint: positive and negative errors would cancel.)</label></li>
+    <li><input type="checkbox" id="d2e"><label for="d2e">Read <code>estimate_price</code> in <code>model.py</code> and <code>cost</code> in <code>train.py</code>. Find the formula from the subject in the code.</label></li>
+  </ul>
+  <details><summary>Check yourself</summary>
+    <p>What are the units of θ0 and of θ1? <em>θ0 is a price (price at 0 km). θ1 is price per km, so it is tiny: about −0.0214, meaning a car loses roughly 21 units of price per 1&#8239;000 km.</em></p>
+  </details>
+</div>
+
+<div class="day" data-day="3">
+  <h3>Session 3 <span class="tag">Gradient descent</span><span class="time">~2.5 h</span></h3>
+  <p><strong>Goal:</strong> derive the two subject formulas yourself and understand the learning rate and the simultaneous update.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d3a"><label for="d3a">Read <a href="concepts.html#gd">Concepts §4 (gradient descent)</a> slowly. Do the derivation on paper alongside it.</label></li>
+    <li><input type="checkbox" id="d3b"><label for="d3b">Close the page and derive ∂J/∂θ0 and ∂J/∂θ1 from J alone. Compare with the subject's <code>tmpθ0</code> and <code>tmpθ1</code>.</label></li>
+    <li><input type="checkbox" id="d3c"><label for="d3c">By hand, do one gradient-descent step on the tiny dataset x = [1, 2, 3], y = [2, 4, 7], learning rate 0.01, starting from θ = (0, 0). (Answer: θ0 = 0.04333, θ1 = 0.10333. The test <code>test_first_step_uses_subject_formula…</code> checks the same thing.)</label></li>
+    <li><input type="checkbox" id="d3d"><label for="d3d">Explain the <em>simultaneous update</em> bug: what goes wrong if you update θ0 and then use the new θ0 to compute θ1's gradient? Read <code>test_second_step_uses_old_thetas…</code>.</label></li>
+    <li><input type="checkbox" id="d3e"><label for="d3e">In the Playground, press <em>Step</em> 10 times and watch the cost curve. Then try learning rates 0.01, 0.5, 1.5, 1.99 and 2.1. Note what happens.</label></li>
+  </ul>
+  <details><summary>Check yourself</summary>
+    <p>Why is there a minus sign in the update θ := θ − α·gradient? <em>The gradient points uphill (towards higher cost). We want to go downhill.</em></p>
+  </details>
+</div>
+
+<div class="day" data-day="4">
+  <h3>Session 4 <span class="tag">Feature scaling</span><span class="time">~2 h</span></h3>
+  <p><strong>Goal:</strong> understand the one design choice evaluators always ask about: why we normalize, and how the thetas are converted back.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d4a"><label for="d4a">Read <a href="concepts.html#scaling">Concepts §5 (feature scaling)</a>.</label></li>
+    <li><input type="checkbox" id="d4b"><label for="d4b">Run <code>uv run train.py --no-normalize --learning-rate 0.01</code>. It diverges. Why?</label></li>
+    <li><input type="checkbox" id="d4c"><label for="d4c">Run <code>uv run train.py --no-normalize --learning-rate 1e-10</code>, then <code>uv run precision.py</code>. Look at θ1: it is <em>positive</em>. Why is this model useless even though it did not diverge?</label></li>
+    <li><input type="checkbox" id="d4d"><label for="d4d">On paper, derive the <code>denormalize</code> formula: start from price = a + b·(x − μ)/σ and expand it.</label></li>
+    <li><input type="checkbox" id="d4e"><label for="d4e">Run <code>uv run train.py</code> again (normalized). Check that <code>predict.py</code> uses raw km and the exact subject hypothesis.</label></li>
+  </ul>
+  <details><summary>Check yourself</summary>
+    <p>Does normalizing break the rule “use the specified training function”? <em>No. The update formula is exactly the subject's. We only change the units of the input before training, which is standard practice. predict.py still uses θ0 + θ1·mileage on raw km.</em></p>
+  </details>
+</div>
+
+<div class="day" data-day="5">
+  <h3>Session 5 <span class="tag">The code, line by line</span><span class="time">~2 h</span></h3>
+  <p><strong>Goal:</strong> be able to explain any line an evaluator points at.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d5a"><label for="d5a">Read the <a href="code.html">Code walkthrough</a> with the source files open next to it.</label></li>
+    <li><input type="checkbox" id="d5b"><label for="d5b">For <code>predict.py</code>: try the inputs <code>abc</code>, <code>-5</code>, an empty line, <code>1e400</code>, <code>nan</code>, <kbd>Ctrl</kbd>+<kbd>D</kbd> and <kbd>Ctrl</kbd>+<kbd>C</kbd>. Explain what the code does for each.</label></li>
+    <li><input type="checkbox" id="d5c"><label for="d5c">Break the data: make a copy of <code>data.csv</code> with a bad row and run <code>uv run train.py --data broken.csv</code>. Read the error message.</label></li>
+    <li><input type="checkbox" id="d5d"><label for="d5d">Run <code>uv run pytest -v</code>. Pick 5 tests and explain in one sentence what each one proves.</label></li>
+    <li><input type="checkbox" id="d5e"><label for="d5e">Explain what <code>uv sync</code>, <code>uv run</code>, <code>pyproject.toml</code> and <code>uv.lock</code> are for.</label></li>
+  </ul>
+</div>
+
+<div class="day" data-day="6">
+  <h3>Session 6 <span class="tag">Bonus: precision and plotting</span><span class="time">~1.5 h</span></h3>
+  <p><strong>Goal:</strong> understand the metrics well enough to say whether the model is good.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d6a"><label for="d6a">Read <a href="concepts.html#metrics">Concepts §6 (measuring precision)</a>.</label></li>
+    <li><input type="checkbox" id="d6b"><label for="d6b">Run <code>uv run precision.py</code>. Explain each number: MAE ≈ 558, RMSE ≈ 668, R² ≈ 0.733.</label></li>
+    <li><input type="checkbox" id="d6c"><label for="d6c">Why is RMSE bigger than MAE? When would they be equal?</label></li>
+    <li><input type="checkbox" id="d6d"><label for="d6d">Run <code>uv run plot.py</code>. Compare the trained line with the one you drew by eye in session 1.</label></li>
+    <li><input type="checkbox" id="d6e"><label for="d6e">Predict the price for 400&#8239;000 km and for 0 km. Are those predictions trustworthy? Read <a href="concepts.html#limits">§7 (limits)</a>.</label></li>
+  </ul>
+</div>
+
+<div class="day" data-day="7">
+  <h3>Session 7 <span class="tag">Rebuild and mock defense</span><span class="time">~2.5 h</span></h3>
+  <p><strong>Goal:</strong> prove to yourself that you could have written this project alone.</p>
+  <ul class="tasks">
+    <li><input type="checkbox" id="d7a"><label for="d7a">In an empty folder, without looking, write a minimal <code>train.py</code> + <code>predict.py</code> (follow the <a href="defense.html#rebuild">rebuild challenge</a>). Compare your θ values with this repo's.</label></li>
+    <li><input type="checkbox" id="d7b"><label for="d7b">Go through the <a href="defense.html#checklist">evaluation checklist</a> and run every check yourself.</label></li>
+    <li><input type="checkbox" id="d7c"><label for="d7c">Answer every question in <a href="defense.html#questions">Defense prep</a> <em>out loud</em> before opening the answer.</label></li>
+    <li><input type="checkbox" id="d7d"><label for="d7d">Ask a peer to evaluate you with the checklist. Note every question you hesitated on and revisit it.</label></li>
+    <li><input type="checkbox" id="d7e"><label for="d7e">Re-read the README's “AI usage” section. Make sure it honestly describes how you used AI, and edit it if needed.</label></li>
+  </ul>
+</div>
+
+<h2>Quick commands</h2>
+<pre><span class="c"># install dependencies (once)</span>
+uv sync
+
+<span class="c"># mandatory part</span>
+uv run predict.py          <span class="c"># before training: prints 0.00</span>
+uv run train.py            <span class="c"># learns theta0, theta1 and writes thetas.json</span>
+uv run predict.py          <span class="c"># now gives a real estimate</span>
+
+<span class="c"># bonus</span>
+uv run plot.py             <span class="c"># data + regression line</span>
+uv run precision.py        <span class="c"># MAE, MSE, RMSE, R^2</span>
+
+<span class="c"># tests</span>
+uv run pytest -v</pre>
+</main>
+
+<footer>ft_linear_regression study docs. Open the files directly from disk; no internet needed.</footer>
+
+<script>
+(function () {
+  const KEY = "ftlr-study-progress";
+  const boxes = Array.from(document.querySelectorAll("ul.tasks input[type=checkbox]"));
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || "{}") || {}; } catch (e) { state = {}; }
+
+  function render() {
+    let done = 0;
+    boxes.forEach(b => {
+      b.checked = !!state[b.id];
+      b.closest("li").classList.toggle("done", b.checked);
+      if (b.checked) done++;
+    });
+    document.getElementById("bar").style.width = (100 * done / boxes.length) + "%";
+    document.getElementById("progress-text").textContent = done + " of " + boxes.length + " tasks done";
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {} }
+
+  boxes.forEach(b => b.addEventListener("change", () => { state[b.id] = b.checked; save(); render(); }));
+  document.getElementById("reset").addEventListener("click", () => {
+    if (confirm("Clear all checkboxes?")) { state = {}; save(); render(); }
+  });
+  render();
+})();
+</script>
+</body>
+</html>

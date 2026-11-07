@@ -32,6 +32,7 @@
   <tr><td><code>plot.py</code></td><td>bonus</td><td>Plots the data and the regression line.</td></tr>
   <tr><td><code>precision.py</code></td><td>bonus</td><td>Computes MAE, MSE, RMSE and R².</td></tr>
   <tr><td><code>tests/test_model.py</code></td><td>extra</td><td>Automatic checks, including a comparison with the exact closed-form answer.</td></tr>
+  <tr><td><code>Makefile</code></td><td>setup</td><td>The 42 rules <code>all</code>, <code>clean</code>, <code>fclean</code>, <code>re</code>, plus <code>train</code>, <code>predict</code>, <code>plot</code>, <code>precision</code>, <code>test</code>. Each wraps a <code>uv</code> command.</td></tr>
   <tr><td><code>pyproject.toml</code>, <code>uv.lock</code></td><td>setup</td><td>Dependencies, managed by uv.</td></tr>
   <tr><td><code>thetas.json</code></td><td>generated</td><td>Written by <code>train.py</code>. Not committed (it is in <code>.gitignore</code>), so the evaluator sees the program start untrained.</td></tr>
 </table></div>
@@ -224,6 +225,19 @@ See <a href="concepts.html#metrics">Concepts §6</a> for what each metric means.
   <li><code>uv sync</code> creates <code>.venv/</code> and installs from the lock file.</li>
   <li><code>uv run script.py</code> runs the script inside that environment, with no manual activation needed.</li>
   <li><code>package = false</code> tells uv this is a set of scripts, not an installable library.</li>
+</ul>
+
+<h2 id="makefile">The Makefile</h2>
+<p>42 projects ship a <code>Makefile</code> with the rules <code>all</code>, <code>clean</code>, <code>fclean</code> and <code>re</code>. Here they map onto uv:</p>
+<pre><span class="k">all</span>: $(VENV)
+$(VENV): pyproject.toml uv.lock     <span class="c"># rebuilt only if these files change</span>
+	$(UV) sync
+	@touch $(VENV)</pre>
+<ul>
+  <li><strong>No relink:</strong> <code>.venv</code> is a real file target that depends on <code>pyproject.toml</code> and <code>uv.lock</code>. Running <code>make</code> twice prints “Nothing to be done for 'all'”. Evaluators check this. <code>touch</code> updates the folder's timestamp, because <code>uv sync</code> does not always change it.</li>
+  <li><strong><code>clean</code></strong> removes caches (<code>__pycache__</code>, <code>.pytest_cache</code>) and temporary files. <strong><code>fclean</code></strong> also removes <code>.venv</code> and <code>thetas.json</code>, which puts the model back to untrained (θ = 0), the equivalent of deleting the binary in a C project.</li>
+  <li>The run rules (<code>train</code>, <code>predict</code>, …) depend on <code>$(VENV)</code>, so dependencies are installed first if needed. <code>ARGS</code> passes options through: <code>make train ARGS="--iterations 200"</code>.</li>
+  <li>Every rule that is not a file is listed in <code>.PHONY</code>, so a file named <code>test</code> or <code>clean</code> can never block it.</li>
 </ul>
 </main>
 

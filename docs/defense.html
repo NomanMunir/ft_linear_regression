@@ -36,10 +36,10 @@ No numpy, pandas or scikit-learn anywhere. <code>matplotlib</code> appears only 
 <div class="card">
 <h3 style="margin-top:0">2. The specified hypothesis</h3>
 <p>Show <code>estimate_price</code> in <code>model.py</code>: <code>return theta0 + (theta1 * mileage)</code>. Show that <code>predict.py</code> calls it on the raw mileage, and that <code>train.py</code> calls the same function inside the loop.</p>
-<pre>rm -f thetas.json
-uv run predict.py        <span class="c"># enter 50000 -> "Note: model not trained yet" ... 0.00</span>
-uv run train.py
-uv run predict.py        <span class="c"># enter 50000 -> about 7427.15</span></pre>
+<pre>make fclean && make      <span class="c"># fresh install, thetas.json removed</span>
+make predict             <span class="c"># enter 50000 -> "Note: model not trained yet" ... 0.00</span>
+make train
+make predict             <span class="c"># enter 50000 -> about 7427.15</span></pre>
 </div>
 
 <div class="card">
@@ -94,6 +94,7 @@ uv run predict.py        <span class="c"># enter 50000 -> about 7427.15</span></
 
 <h3>Code and tools</h3>
 <details><summary>Why Python? Why these libraries?</summary><p>The subject allows any language and recommends one that makes visualization easy. Python's standard library covers CSV, JSON and maths, so the mandatory part needs no external library. matplotlib is used only for the bonus plot.</p></details>
+<details><summary>What do the Makefile rules do? Does it relink?</summary><p><code>make</code> runs <code>uv sync</code>; <code>clean</code> removes caches; <code>fclean</code> also removes <code>.venv</code> and <code>thetas.json</code>; <code>re</code> is <code>fclean</code> + <code>all</code>. It does not relink: <code>.venv</code> is a file target that depends on <code>pyproject.toml</code> and <code>uv.lock</code>, so a second <code>make</code> prints “Nothing to be done”. <a href="code.html#makefile">Code walkthrough</a></p></details>
 <details><summary>Why is thetas.json not in the repository?</summary><p>It is generated. Committing it would make <code>predict.py</code> appear trained before the evaluator runs <code>train.py</code>, which goes against the “theta0 and theta1 are 0 before training” rule.</p></details>
 <details><summary>What happens if thetas.json is corrupted?</summary><p><code>load_thetas</code> raises <code>ModelError</code> and the program prints a clear error. It does not silently fall back to 0, which would hide the problem. A <em>missing</em> file is different: it means untrained, so 0 is correct.</p></details>
 <details><summary>How did you use AI in this project?</summary><p>Answer honestly; the subject asks for transparency. The README has an “AI usage” section. Make sure it matches what really happened, and that you can explain every line yourself.</p></details>

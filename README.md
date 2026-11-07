@@ -12,10 +12,29 @@ estimatePrice(mileage) = θ0 + (θ1 * mileage)
 - Python 3.10+ (uv can install it for you)
 
 ```sh
-uv sync
+make            # same as: uv sync
 ```
 
+## Makefile
+
+| Rule | Does |
+|---|---|
+| `make` / `make all` | install dependencies (`uv sync`); does nothing if already up to date |
+| `make train` | `uv run train.py` |
+| `make predict` | `uv run predict.py` |
+| `make plot` | bonus: `uv run plot.py` |
+| `make precision` | bonus: `uv run precision.py` |
+| `make test` | `uv run pytest -v` |
+| `make clean` | remove caches and temporary files |
+| `make fclean` | `clean` + remove `.venv` and `thetas.json` (model back to untrained) |
+| `make re` | `fclean` + `all` |
+| `make help` | list the rules |
+
+Pass options with `ARGS`, for example `make train ARGS="--learning-rate 0.5 --iterations 200"`.
+
 ## Usage
+
+The `uv run` commands below are what the `make` rules call.
 
 ### Mandatory part
 
@@ -59,6 +78,7 @@ uv run pytest -v
 
 | File | Part | Role |
 |---|---|---|
+| `Makefile` | setup | `all`, `clean`, `fclean`, `re` + run targets |
 | `predict.py` | mandatory | Prompts for a mileage, prints the estimate |
 | `train.py` | mandatory | Gradient descent, saves θ0 and θ1 |
 | `model.py` | mandatory | Hypothesis, CSV reading, theta file I/O |

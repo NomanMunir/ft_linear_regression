@@ -144,19 +144,22 @@
 
 <h2>Quick commands</h2>
 <pre><span class="c"># install dependencies (once)</span>
-uv sync
+make                       <span class="c"># = uv sync</span>
 
 <span class="c"># mandatory part</span>
-uv run predict.py          <span class="c"># before training: prints 0.00</span>
-uv run train.py            <span class="c"># learns theta0, theta1 and writes thetas.json</span>
-uv run predict.py          <span class="c"># now gives a real estimate</span>
+make predict               <span class="c"># before training: prints 0.00</span>
+make train                 <span class="c"># learns theta0, theta1 and writes thetas.json</span>
+make predict               <span class="c"># now gives a real estimate</span>
 
 <span class="c"># bonus</span>
-uv run plot.py             <span class="c"># data + regression line</span>
-uv run precision.py        <span class="c"># MAE, MSE, RMSE, R^2</span>
+make plot                  <span class="c"># data + regression line</span>
+make precision             <span class="c"># MAE, MSE, RMSE, R^2</span>
 
-<span class="c"># tests</span>
-uv run pytest -v</pre>
+<span class="c"># tests, cleanup, options</span>
+make test                  <span class="c"># = uv run pytest -v</span>
+make fclean                <span class="c"># removes .venv and thetas.json: model untrained again</span>
+make train ARGS="--learning-rate 0.5 --iterations 200"</pre>
+<p>Each <code>make</code> rule runs the matching <code>uv run …</code> command (see the <code>Makefile</code>), so the commands used elsewhere in this guide work too.</p>
 </main>
 
 <footer>ft_linear_regression study docs. Open the files directly from disk; no internet needed.</footer>

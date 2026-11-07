@@ -1,0 +1,22 @@
+[project]
+name = "ft-linear-regression"
+version = "1.0.0"
+description = "42 ft_linear_regression: predict a car price from its mileage with gradient descent"
+readme = "README.md"
+requires-python = ">=3.10"
+# The mandatory programs (train.py, predict.py) use the standard library only.
+# matplotlib is used by the bonus plot.py, only for drawing.
+dependencies = [
+    "matplotlib>=3.8",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
